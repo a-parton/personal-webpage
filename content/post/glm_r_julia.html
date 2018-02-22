@@ -4,6 +4,7 @@ author: Alison Parton
 output: html_document
 date: 2018-02-22
 tags: ["R","julia","glm"]
+summary: "This is a quick comparison of simple logistic regression fitting in R and julia. Spoiler: julia is faster."
 ---
 
 
@@ -85,12 +86,12 @@ stderr(fit)
 <pre class="julia"><code>@elapsed for i in 1:10000
            glm(@formula(theta ~ x), obs, Binomial(), LogitLink(), wts = obs[:pop])
          end
-## 1.200012779</code></pre>
+## 1.188995382</code></pre>
 <pre class="r"><code>system.time(
   for (i in 1:10000) {
     glm(succ / pop ~ x, data = obs, family = binomial, weights = obs$pop)
   }
 )
 ##    user  system elapsed 
-##   9.759   0.000   9.759</code></pre>
+##   9.615   0.000   9.616</code></pre>
 </div>

@@ -4,6 +4,7 @@ author: Alison Parton
 output: html_document
 date: 2018-02-22
 tags: ["R","julia","glm"]
+summary: "This is a quick comparison of simple logistic regression fitting in R and julia. Spoiler: julia is faster."
 ---
 
 ```{r setup, include=FALSE}
