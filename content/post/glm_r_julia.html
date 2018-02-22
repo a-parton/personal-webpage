@@ -69,7 +69,18 @@ obs[:theta] = obs[:succ] ./ obs[:pop]
 ## 
 ## Number of Fisher Scoring iterations: 3</code></pre>
 <p>and in julia:</p>
-<pre class="julia"><code>coef(fit)
+<pre class="julia"><code>fit
+## StatsModels.DataFrameRegressionModel{GLM.GeneralizedLinearModel{GLM.GlmResp{Array{Float64,1},Distributions.Binomial{Float64},GLM.LogitLink},GLM.DensePredChol{Float64,Base.LinAlg.Cholesky{Float64,Array{Float64,2}}}},Array{Float64,2}}
+## 
+## Formula: theta ~ 1 + x
+## 
+## Coefficients:
+##                Estimate Std.Error   z value Pr(&gt;|z|)
+## (Intercept)   -0.264318  0.226044  -1.16932   0.2423
+## x            -0.0382826 0.0528096 -0.724917   0.4685
+
+# examples of options for specific model values
+coef(fit)
 ## 2-element Array{Float64,1}:
 ##  -0.264318 
 ##  -0.0382826
@@ -82,16 +93,38 @@ stderr(fit)
 </div>
 <div id="r-vs-julia" class="section level2">
 <h2>R vs julia</h2>
-<p>So what’s the point of using julia over R for fitting glm’s, especially when the documentation for this in julia is severely lacking in comparison? Well, julia is fast at doing a lot of things R isn’t, so if we needed to fit lots of regression models sequentially, we would see a significant time boost by using julia over R. In this example, if we just fit the same model 10000 times, julia does it about 10 times faster than R.</p>
-<pre class="julia"><code>@elapsed for i in 1:10000
-           glm(@formula(theta ~ x), obs, Binomial(), LogitLink(), wts = obs[:pop])
-         end
-## 1.188995382</code></pre>
+<p>So what’s the point of using julia over R for fitting glm’s, especially when the documentation for this in julia is severely lacking in comparison? Well, julia is fast at doing a lot of things R isn’t, so if we needed to fit lots of regression models sequentially, we would hope to see a significant time boost by using julia over R.</p>
+<p>In this example, let’s assume we have 10000 sets of data coming in sequentially, and each time we want to fit the logistic regression and predict what the outcome would be for a new observation with <code>x=1</code>. Implement this in R as:</p>
+<pre class="r"><code>r_lg_pred &lt;- function() {
+  obs = data.frame(x = rnorm(10),
+                   succ = sample(20:30, 10),
+                   fail = sample(10:20, 10))
+  obs$pop &lt;- obs$succ + obs$fail
+  fit &lt;- glm(succ / pop ~ x, data = obs, family = binomial, weights = obs$pop)
+  predict(fit, newdata = data.frame(x = 1.0))
+}
+r_store_pred &lt;- rep(NA, 10000)</code></pre>
+<p>and in julia as:</p>
+<pre class="julia"><code>function jul_lg_pred()
+  obs = DataFrame(x = randn(10),
+                  succ = rand(20.0:30, 10),
+                  fail = rand(10.0:20, 10))
+  obs[:pop] = obs[:succ] .+ obs[:fail]
+  obs[:theta] = obs[:succ] ./ obs[:pop]
+  fit = glm(@formula(theta ~ x), obs, Binomial(), LogitLink(), wts = obs[:pop])
+  predict(fit, DataFrame(x = [1.0]))[1]
+end
+jul_store_pred = zeros(Float64, 10000)</code></pre>
+<p>Timed runs show a potentially useful speed-up in julia</p>
 <pre class="r"><code>system.time(
   for (i in 1:10000) {
-    glm(succ / pop ~ x, data = obs, family = binomial, weights = obs$pop)
+    r_store_pred[i] &lt;- r_lg_pred()
   }
 )
 ##    user  system elapsed 
-##   9.615   0.000   9.616</code></pre>
+##  17.369   0.004  17.373</code></pre>
+<pre class="julia"><code>@elapsed for i in 1:10000
+           jul_store_pred[i] = jul_lg_pred()
+         end
+## 2.829691777</code></pre>
 </div>

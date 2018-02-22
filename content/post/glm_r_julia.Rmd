@@ -85,6 +85,9 @@ summary(fit_a)
 and in julia:
 
 ```{julia julia_model}
+fit
+
+# examples of options for specific model values
 coef(fit)
 deviance(fit)
 stderr(fit)
@@ -92,18 +95,49 @@ stderr(fit)
 
 ## R vs julia
 
-So what's the point of using julia over R for fitting glm's, especially when the documentation for this in julia is severely lacking in comparison? Well, julia is fast at doing a lot of things R isn't, so if we needed to fit lots of regression models sequentially, we would see a significant time boost by using julia over R. In this example, if we just fit the same model 10000 times, julia does it about 10 times faster than R.
+So what's the point of using julia over R for fitting glm's, especially when the documentation for this in julia is severely lacking in comparison? Well, julia is fast at doing a lot of things R isn't, so if we needed to fit lots of regression models sequentially, we would hope to see a significant time boost by using julia over R. 
 
-```{julia julia_time}
-@elapsed for i in 1:10000
-           glm(@formula(theta ~ x), obs, Binomial(), LogitLink(), wts = obs[:pop])
-         end
-```
+In this example, let's assume we have 10000 sets of data coming in sequentially, and each time we want to fit the logistic regression and predict what the outcome would be for a new observation with `x=1`. Implement this in R as:
 
 ```{r r_time}
+r_lg_pred <- function() {
+  obs = data.frame(x = rnorm(10),
+                   succ = sample(20:30, 10),
+                   fail = sample(10:20, 10))
+  obs$pop <- obs$succ + obs$fail
+  fit <- glm(succ / pop ~ x, data = obs, family = binomial, weights = obs$pop)
+  predict(fit, newdata = data.frame(x = 1.0))
+}
+r_store_pred <- rep(NA, 10000)
+```
+
+and in julia as:
+
+```{julia julia_time, results = 'hide'}
+function jul_lg_pred()
+  obs = DataFrame(x = randn(10),
+                  succ = rand(20.0:30, 10),
+                  fail = rand(10.0:20, 10))
+  obs[:pop] = obs[:succ] .+ obs[:fail]
+  obs[:theta] = obs[:succ] ./ obs[:pop]
+  fit = glm(@formula(theta ~ x), obs, Binomial(), LogitLink(), wts = obs[:pop])
+  predict(fit, DataFrame(x = [1.0]))[1]
+end
+jul_store_pred = zeros(Float64, 10000)
+```
+
+Timed runs show a potentially useful speed-up in julia
+
+```{r}
 system.time(
   for (i in 1:10000) {
-    glm(succ / pop ~ x, data = obs, family = binomial, weights = obs$pop)
+    r_store_pred[i] <- r_lg_pred()
   }
 )
+```
+
+```{julia}
+@elapsed for i in 1:10000
+           jul_store_pred[i] = jul_lg_pred()
+         end
 ```
