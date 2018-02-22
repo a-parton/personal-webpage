@@ -30,8 +30,8 @@ weight = 5
 
 # Biography
 
-I am a Postdoctoral Research Associate of statistical ecology in the department of Animal and Plant Sciences at the University of Sheffield, working with Dr Dylan Childs and Prof Paul Blackwell and funded by the Leverhulme Trust.
+I am a Postdoctoral Research Associate of statistical ecology in the department of [Animal and Plant Sciences](https://www.sheffield.ac.uk/aps) at the University of Sheffield, working with [Dr Dylan Childs](https://www.sheffield.ac.uk/aps/staff-and-students/acadstaff/childs) and [Prof Paul Blackwell](http://paul-blackwell.staff.shef.ac.uk/) and funded by the Leverhulme Trust.
 
 Currently, I am working on applying ABC methodologies to a dynamic energy budget model for the Soay sheep population. My PhD involved developing continuous-time statistical models for carrying out inference on animal movement data obtained by GPS telemetry.
 
-<a class="twitter-timeline" data-height="400" data-theme="light" href="https://twitter.com/Alison_Parton">Tweets by TwitterDev</a> <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+<a class="twitter-timeline" data-height="500" data-theme="light" href="https://twitter.com/Alison_Parton">Tweets by TwitterDev</a> <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>

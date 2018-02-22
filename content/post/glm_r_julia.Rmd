@@ -1,0 +1,108 @@
+---
+title: "Logistic regression: R vs Julia"
+author: Alison Parton
+output: html_document
+date: 2018-02-22
+tags: ["R","julia","glm"]
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(collapse = TRUE)
+```
+
+This is a quick comparison of simple logistic regression fitting in R and julia. To implement this, you will need julia and the `JuliaCall` package in R. The following allows you to define a `julia chunk` in R markdown.
+```{r}
+knitr::knit_engines$set(julia = JuliaCall::eng_juliacall)
+```
+
+## In R
+
+Standard logistic regression is implemented easily in R with the `glm` function. In this example we'll use the following data, that gives a continuous variable `x` and the numbers of successes, `succ`, and failures `fail`. The total population size for each observation of `x` is then successes plus failures.
+
+```{r r_data}
+obs <- data.frame(x = c(1.1, 3.3, 5.3, 2.1, 7.3, 3.6, 5.9, 4.6, 3.5, 4.3),
+                  succ = c(23, 24, 17, 26, 15, 22, 20, 19, 19, 21),
+                  fail = c(39, 35, 32, 28, 25, 31, 35, 27, 29, 31))
+obs$pop <- obs$succ + obs$fail
+
+```
+
+For data concatenated in this way (so that there isn't an entry for every observation with a binary outcome, but instead a summary of the binomial outcome) we can fit logistic regression in a number of ways in R. One option is to give success probabilities and total population sizes with the `weights` option, and the other is to give a two-column dataframe of the success and failures. Both these options are shown here.
+
+```{r r_logreg}
+fit_a <- glm(succ / pop ~ x, data = obs, family = binomial, weights = obs$pop)
+fit_b <- glm(cbind(succ, fail) ~ x, data = obs, family = binomial)
+
+```
+
+These function calls both produce the same estimates of the coefficients, deviance, etc.
+
+```{r r_samemodel}
+identical(coefficients(fit_a), coefficients(fit_b)) 
+
+```
+
+## In julia
+
+Julia is a relatively new high performance language that implements just-in-time compilation, so is really speedy for a lot of things that R just isn't. To define dataframes like in R and fit glm's two packages are needed.
+
+```{julia julia_pkg}
+# packages are required for glm's and dataframes
+Pkg.add("GLM")
+Pkg.add("DataFrames")
+using(GLM) 
+using(DataFrames) 
+
+```
+
+To define the same data as used above in julia we use `DataFrame`. This is pretty similar to R, but notice that if you want to do vector operations you need the `./` syntax.
+
+```{julia julia_obs, results = 'hide'}
+obs = DataFrame(x = [1.1, 3.3, 5.3, 2.1, 7.3, 3.6, 5.9, 4.6, 3.5, 4.3],
+                succ = [23.0, 24, 17, 26, 15, 22, 20, 19, 19, 21],
+                fail = [39.0, 35, 32, 28, 25, 31, 35, 27, 29, 31])
+obs[:pop] = obs[:succ] .+ obs[:fail]
+obs[:theta] = obs[:succ] ./ obs[:pop]
+
+```
+
+Fitting the regression is also very similar to option `a` in R (the two-column definition approach does not apply in julia), using `wts`. 
+
+```{julia julia_logreg, results = 'hide'}
+fit = glm(@formula(theta ~ x), obs, Binomial(), LogitLink(), wts = obs[:pop])
+```
+
+## Sanity check between R and julia
+
+Check that the two approaches produce the same estimates. In r: 
+
+```{r r_model}
+summary(fit_a)
+```
+
+and in julia:
+
+```{julia julia_model}
+coef(fit)
+deviance(fit)
+stderr(fit)
+```
+
+## R vs julia
+
+So what's the point of using julia over R for fitting glm's, especially when the documentation for this in julia is severely lacking in comparison? Well, julia is fast at doing a lot of things R isn't, so if we needed to fit lots of regression models sequentially, we would see a significant time boost by using julia over R. In this example, if we just fit the same model 10000 times, julia does it about 10 times faster than R.
+
+```{julia julia_time}
+@elapsed for i in 1:10000
+           glm(@formula(theta ~ x), obs, Binomial(), LogitLink(), wts = obs[:pop])
+         end
+```
+
+```{r r_time}
+system.time(
+  for (i in 1:10000) {
+    glm(succ / pop ~ x, data = obs, family = binomial, weights = obs$pop)
+  }
+)
+```
