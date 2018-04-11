@@ -1,0 +1,72 @@
+---
+title: "ABC in diagrams"
+author: "Alison Parton"
+date: 2018-04-11
+output: html_document
+tags: ["soay-abc","ABC","Bayesian"]
+bibliography: abc_bib.bib
+summary: "This is an introduction to simple, rejection ABC and sequential ABC methods."
+header-includes:
+  - \usepackage{pdfpages}
+---
+
+
+
+
+<p>This is a quick introduction to simple, rejection approximate Bayesian compution and more useful sequential methods (because I needed to make the diagrams for a poster).</p>
+<div id="simple-rejection-abc" class="section level2">
+<h2>Simple Rejection ABC</h2>
+<p>Many of the tools for inference about a parameter set <span class="math inline">\(\Theta\)</span> given observed data <span class="math inline">\(x\)</span> require the ability to evaluate the likelihood <span class="math inline">\(f(\Theta | x)\)</span>. When this likelihood is analytically or computationally intractable, approximate Bayesian computation (ABC) allows for likelihood-free inference when the model can be simulated from, and is a popular tool in areas of genetics, climate study and ecology.</p>
+<p>The simplest implementation of ABC is a rejection sampler <span class="citation">(Pritchard et al. 1999)</span>, with schematic diagram shown:</p>
+<div class="figure">
+<img src="/post/Simple_ABC.png" alt="Fig 1: Simple rejection ABC" />
+<p class="caption">Fig 1: Simple rejection ABC</p>
+</div>
+<ul>
+<li>A set of <span class="math inline">\(N\)</span> “particles” (i.e. parameter sets) are proposed from the prior distribution and each is used to generate a simulated set of data under the model (<span class="math inline">\(x_i \sim f(x_i~|\Theta_i)\)</span>).</li>
+<li>Each of these simulated datasets are compared with the observed data, <span class="math inline">\(x\)</span>, using by taking the distance (usually the Euclidean) between a set of summary statistics evaluated at <span class="math inline">\(x\)</span> and <span class="math inline">\(x_i\)</span>. In the above schematic, the ‘summary’ of the data is the colour.</li>
+<li>Particles are accepted by either setting a tolerance threshold for the distance, or more commonly, by accepting the <span class="math inline">\(\alpha \%\)</span> of particles with the smallest distance (i.e. the set of particles that led to the ‘best’/most similar simulations). This sample of parameters is an approximation to the target posterior distribution.</li>
+</ul>
+</div>
+<div id="sequential-abc" class="section level2">
+<h2>Sequential ABC</h2>
+<p>The simple ABC method often leads to low acceptance rates of parameters, or the acceptance of parameters with large distances from the observed data resulting in a poor approximation to the posterior. This is especially so when the prior distribution is very different from the true posterior. Rather than completing a single step from prior to posterior that would require a computationally inefficient number of proposed particles and corresponding simulations, sequential methods have been proposed that iterate over a sequence of distributions from the prior that get ever ‘closer’ to the posterior. The idea here is to have a higehr acceptance at each step than would be required by the simple rejection method, with each step focusing further on the regions of parameter space with high likelihood, with the hope of reducing the computational burden by requiring fewer iterations overall than simple rejection.</p>
+<p>A number of sequential ABC methods have been proposed based on the same idea that differ slightly in implementation. <span class="citation">Sisson, Fan, and Tanaka (2009)</span> and <span class="citation">Toni et al. (2009)</span> require a set of decreasing tolerance levels for the distance function at each step to be specified, which is unideal as the appropriate levels are difficult to ascertain. <span class="citation">Drovandi and Pettitt (2011)</span> and <span class="citation">Del Moral, Doucet, and Jasra (2012)</span> do not require this, and instead estimate an appropriate tolerance level at each step, however these methods can lead to the duplication of particles.</p>
+<p>This post will focus on the <span class="citation">Lenormand, Jabot, and Deffuant (2013)</span> approach. This approach has an automated tolerance level that is based on accepting the best set of particles of the same size each step but also allows for particles from previous steps to remain throughout future steps if they are still within the set of “best” particles. This is an attractive feature, computationally, as you retain particles with high likelihood. Additionally, the other methods described require repeated simulations at each step until a certain number of particles has been accepted. In <span class="citation">Lenormand, Jabot, and Deffuant (2013)</span> the nubmer of simulations at each step is constant, and so the computational cost of another step is always known.</p>
+<p>The so-called adaptive population Monte Carlo (APMC) ABC sampler is shown in the following schematic:</p>
+<div class="figure">
+<img src="/post/APMC-ABC.png" alt="Fig 2: Sequential ABC" />
+<p class="caption">Fig 2: Sequential ABC</p>
+</div>
+<ul>
+<li>An initial step the same as simple rejection ABC is carried out, retaining the <span class="math inline">\(\alpha N\)</span> particles with smallest distance to the observed data.</li>
+<li>Each iterative step then consists of taking the set of retained particles and taking a weighted resample of <span class="math inline">\((1-\alpha)N\)</span> particles. This sample is perturbed (usually by a normal random walk with variance determined by the variation in the current retained particle set) to give the set of proposed particles.</li>
+<li>As in simple ABC, the proposed particles are used to simulate data from the model.</li>
+<li>The simulated data from the retained particles and the new proposed particles are combined, compared with the observed data, and the <span class="math inline">\(\alpha N\)</span> particles from this set of <span class="math inline">\(N\)</span> with the smallest distance are retained. This forms the new “best” set of particles and corresponds to a tolerance level of the <span class="math inline">\(\alpha\)</span> percentile of the distances (therefore guaranteed to decrease at each step).</li>
+<li>The set of weights for the retained particles that were proposed this step are calculated. This weight is based on the weight from an importance sample, i.e. how likely it was to propose that particular particle.</li>
+<li>These steps are repeated until a threshold is met regarding the number of new particles being accepted over the ones retained from the previous step - i.e. when the posterior is not changing because new particles aren’t being accepted, there is little to be gained from further steps.</li>
+</ul>
+</div>
+<div id="references" class="section level2 unnumbered">
+<h2>References</h2>
+<div id="refs" class="references">
+<div id="ref-DelMoral2012">
+<p>Del Moral, P, A Doucet, and A Jasra. 2012. “An adaptive sequential Monte Carlo method for approximate Bayesian computation.” <em>Statistics and Computing</em> 22 (5): 1009–20. doi:<a href="https://doi.org/10.1007/s11222-011-9271-y">10.1007/s11222-011-9271-y</a>.</p>
+</div>
+<div id="ref-Drovandi2011">
+<p>Drovandi, CC, and AN Pettitt. 2011. “Likelihood-free Bayesian estimation of multivariate quantile distributions.” <em>Computational Statistics and Data Analysis</em> 55 (9). Elsevier B.V.: 2541–56. doi:<a href="https://doi.org/10.1016/j.csda.2011.03.019">10.1016/j.csda.2011.03.019</a>.</p>
+</div>
+<div id="ref-Lenormand2013">
+<p>Lenormand, M, F Jabot, and G Deffuant. 2013. “Adaptive approximate Bayesian computation for complex models.” <em>Computational Statistics</em> 28: 2777–96. <a href="http://arxiv.org/abs/1111.1308" class="uri">http://arxiv.org/abs/1111.1308</a>.</p>
+</div>
+<div id="ref-Pritchard1999">
+<p>Pritchard, JK, MT Seielstad, A Perez-Lezaun, and MW Feldman. 1999. “Population growth of human Y chromosomes: a study of Y chromosome microsatellites.” <em>Molecular Biology and Evolution</em> 16 (12): 1791–8. doi:<a href="https://doi.org/10.1093/oxfordjournals.molbev.a026091">10.1093/oxfordjournals.molbev.a026091</a>.</p>
+</div>
+<div id="ref-Sisson2009">
+<p>Sisson, SA, Y Fan, and MM Tanaka. 2009. “Correction for Sisson et al., Sequential Monte Carlo without likelihoods.” <em>Proceedings of the National Academy of Sciences</em> 106 (39): 16889–9. doi:<a href="https://doi.org/10.1073/pnas.0908847106">10.1073/pnas.0908847106</a>.</p>
+</div>
+<div id="ref-Toni2009">
+<p>Toni, T, D Welch, N Strelkowa, A Ipsen, and MPH Stumpf. 2009. “Approximate Bayesian computation scheme for parameter inference and model selection in dynamical systems.” <em>Journal of the Royal Society Interface</em> 6 (July 2008): 187–202. doi:<a href="https://doi.org/10.1098/rsif.2008.0172">10.1098/rsif.2008.0172</a>.</p>
+</div>
+</div>
+</div>
