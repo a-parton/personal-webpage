@@ -20,25 +20,34 @@ This is a quick introduction to simple, rejection approximate Bayesian compution
 
 Many of the tools for inference about a parameter set $\Theta$ given observed data $x$ require the ability to evaluate the likelihood $f(\Theta | x)$. When this likelihood is analytically or computationally intractable, approximate Bayesian computation (ABC) allows for likelihood-free inference when the model can be simulated from, and is a popular tool in areas of genetics, climate study and ecology.
 
-The simplest implementation of ABC is a rejection sampler [@Pritchard1999], with schematic diagram shown:
+The simplest implementation of ABC is a rejection sampler [@Pritchard1999], with schematic diagram shown in Fig 1.
 
 ![Fig 1: Simple rejection ABC](/post/Simple_ABC.png)
 
-- A set of $N$ "particles" (i.e. parameter sets) are proposed from the prior distribution and each is used to generate a simulated set of data under the model ($x_i \sim f(x_i~|\Theta_i)$). 
-- Each of these simulated datasets are compared with the observed data, $x$, using by taking the distance (usually the Euclidean) between a set of summary statistics evaluated at $x$ and $x_i$. In the above schematic, the 'summary' of the data is the colour. 
-- Particles are accepted by either setting a tolerance threshold for the distance, or more commonly, by accepting the $\alpha \%$ of particles with the smallest distance (i.e. the set of particles that led to the 'best'/most similar simulations). This sample of parameters is an approximation to the target posterior distribution. 
+The rejection ABC algorithm is summarised as:
+
+- A set of $N$ "particles" (i.e. parameter sets) are proposed from the prior distribution.
+- Each particle is used to generate a simulated dataset under the model ($x_i \sim f(x_i~|\Theta_i)$). 
+- Each simulation is compared with the observed data, $x$. This comparison takes the form of a 'distance' - in the above schematic the distance is colour similarity.  
+- Particles are accepted based on their corresponding simulation's distance - either by setting a tolerance threshold for the distance and accepting all particles with smaller distance than this, or by accepting the $\alpha$ proportion of particles with the smallest distance (i.e. the set of particles that led to the 'best'/most similar simulations). 
+- The accepted sample of parameters give an approximation to the target posterior distribution. 
+
+The performance of ABC is obviously very closely related to the choice of the distance function, $\delta(x_i, x)$, between simulated data $x_i$ and observed data $x$. Usually, this choice is the Euclidean distance between a set of summary statistics evaluated at $x$ and $x_i$ - in the above, summary being "colour". I'm being purposefully vague on this point, and recommend @Prangle2015 and @Prangle2017 for more information on summary statistics. 
 
 ## Sequential ABC
 
-The simple ABC method often leads to low acceptance rates of parameters, or the acceptance of parameters with large distances from the observed data resulting in a poor approximation to the posterior. This is especially so when the prior distribution is very different from the true posterior. Rather than completing a single step from prior to posterior that would require a computationally inefficient number of proposed particles and corresponding simulations, sequential methods have been proposed that iterate over a sequence of distributions from the prior that get ever 'closer' to the posterior. The idea here is to have a higehr acceptance at each step than would be required by the simple rejection method, with each step focusing further on the regions of parameter space with high likelihood, with the hope of reducing the computational burden by requiring fewer iterations overall than simple rejection.
+The simple ABC method often leads to low acceptance rates of parameters, or the acceptance of parameters with large distances from the observed data resulting in a poor approximation to the posterior. This is especially so when the prior distribution is very different from the true posterior. Rather than completing a single step from prior to posterior that would require a computationally inefficient number of proposed particles and corresponding simulations, sequential methods have been proposed that iterate over a sequence of distributions from the prior that get ever 'closer' to the posterior. The idea here is to have a higher acceptance at each step than would be required by the simple rejection method, with each step focusing further on the regions of parameter space with high likelihood, with the hope of reducing the computational burden by requiring fewer iterations overall than simple rejection.
 
 A number of sequential ABC methods have been proposed based on the same idea that differ slightly in implementation. @Sisson2009 and @Toni2009 require a set of decreasing tolerance levels for the distance function at each step to be specified, which is unideal as the appropriate levels are difficult to ascertain. @Drovandi2011 and @DelMoral2012 do not require this, and instead estimate an appropriate tolerance level at each step, however these methods can lead to the duplication of particles. 
 
-This post will focus on the @Lenormand2013 approach. This approach has an automated tolerance level that is based on accepting the best set of particles of the same size each step but also allows for particles from previous steps to remain throughout future steps if they are still within the set of "best" particles. This is an attractive feature, computationally, as you retain particles with high likelihood. Additionally, the other methods described require repeated simulations at each step until a certain number of particles has been accepted. In @Lenormand2013 the nubmer of simulations at each step is constant, and so the computational cost of another step is always known.
+I'm going to focus on the @Lenormand2013 approach - because that's the version I'm using and have therefore made a diagram of. This approach has an automated tolerance level that is based on accepting the best sample (of constant size) of particles at each step, but differs from the above approaches because particles from previous steps get taken through to future steps if they are still within that set of "best" particles. This is an attractive feature, computationally, as you retain particles with high likelihood. Additionally, the other methods described require repeated simulations at each step until a certain number of particles has been accepted. In @Lenormand2013 the 
+number of simulations at each step is constant, and so the computational cost of another step is always known, which is a nice feature if (more than likely) the simulation is computationally burdensome.
 
-The so-called adaptive population Monte Carlo (APMC) ABC sampler is shown in the following schematic:
+The 'adaptive population Monte Carlo (APMC) ABC sampler' is shown in the schematic of Fig 2.
 
 ![Fig 2: Sequential ABC](/post/APMC-ABC.png)
+
+In summary:
 
 - An initial step the same as simple rejection ABC is carried out, retaining the $\alpha N$ particles with smallest distance to the observed data. 
 - Each iterative step then consists of taking the set of retained particles and taking a weighted resample of $(1-\alpha)N$ particles. This sample is perturbed (usually by a normal random walk with variance determined by the variation in the current retained particle set) to give the set of proposed particles.
